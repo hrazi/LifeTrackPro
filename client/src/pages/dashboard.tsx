@@ -14,7 +14,7 @@ import { CreateTaskDialog } from "@/components/create-task-dialog";
 import { CreateActionDialog } from "@/components/create-action-dialog";
 import { DailyCheckinDialog } from "@/components/daily-checkin-dialog";
 import { CelebrationDialog } from "@/components/celebration-dialog";
-import { getCurrentQuarter, getCurrentWeekRange, getTodayDate } from "@/lib/date-utils";
+import { getCurrentQuarter, getCurrentWeekRange, getTodayDate, getCurrentMonth } from "@/lib/date-utils";
 import type { QuarterlyGoal, MonthlyMilestone, WeeklyTask, DailyAction } from "@shared/schema";
 
 export default function Dashboard() {
@@ -48,6 +48,7 @@ export default function Dashboard() {
   });
 
   const currentQuarter = getCurrentQuarter();
+  const currentMonth = getCurrentMonth();
   const currentWeekRange = getCurrentWeekRange();
   const todayDate = getTodayDate();
 
@@ -248,7 +249,7 @@ export default function Dashboard() {
                     <Plus className="w-5 h-5" />
                   </Button>
                 </div>
-                <p className="text-sm text-slate-500 mt-1">December 2024</p>
+                <p className="text-sm text-slate-500 mt-1">{currentMonth}</p>
               </div>
               
               <CardContent className="p-6 space-y-3">

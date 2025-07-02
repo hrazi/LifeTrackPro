@@ -37,6 +37,15 @@ export function getTodayDate(): string {
   return now.toLocaleDateString('en-US', options);
 }
 
+export function getCurrentMonth(): string {
+  const now = new Date();
+  const options: Intl.DateTimeFormatOptions = { 
+    month: 'long', 
+    year: 'numeric' 
+  };
+  return now.toLocaleDateString('en-US', options);
+}
+
 export function getStartOfWeek(): Date {
   const now = new Date();
   const startOfWeek = new Date(now);
