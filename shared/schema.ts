@@ -27,7 +27,7 @@ export const weeklyTasks = pgTable("weekly_tasks", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
   description: text("description"),
-  monthlyMilestoneId: integer("monthly_milestone_id").notNull(),
+  monthlyMilestoneId: integer("monthly_milestone_id"),
   weekStart: timestamp("week_start").notNull(),
   weekEnd: timestamp("week_end").notNull(),
   completed: boolean("completed").default(false),
@@ -38,7 +38,7 @@ export const dailyActions = pgTable("daily_actions", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
   description: text("description"),
-  weeklyTaskId: integer("weekly_task_id").notNull(),
+  weeklyTaskId: integer("weekly_task_id"),
   date: timestamp("date").notNull(),
   time: text("time"), // e.g., "9:00 AM"
   completed: boolean("completed").default(false),
@@ -68,11 +68,15 @@ export const insertMonthlyMilestoneSchema = createInsertSchema(monthlyMilestones
 export const insertWeeklyTaskSchema = createInsertSchema(weeklyTasks).omit({
   id: true,
   createdAt: true,
+}).extend({
+  monthlyMilestoneId: z.number().optional(),
 });
 
 export const insertDailyActionSchema = createInsertSchema(dailyActions).omit({
   id: true,
   createdAt: true,
+}).extend({
+  weeklyTaskId: z.number().optional(),
 });
 
 export const insertDailyCheckinSchema = createInsertSchema(dailyCheckins).omit({

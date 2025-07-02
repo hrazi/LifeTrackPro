@@ -31,7 +31,7 @@ export function CreateTaskDialog({ open, onOpenChange }: CreateTaskDialogProps) 
     defaultValues: {
       title: "",
       description: "",
-      monthlyMilestoneId: 0,
+      monthlyMilestoneId: undefined,
       weekStart: getStartOfWeek(),
       weekEnd: getEndOfWeek(),
       completed: false,
@@ -79,14 +79,15 @@ export function CreateTaskDialog({ open, onOpenChange }: CreateTaskDialogProps) 
               name="monthlyMilestoneId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Monthly Milestone</FormLabel>
-                  <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString()}>
+                  <FormLabel>Monthly Milestone (optional)</FormLabel>
+                  <Select onValueChange={(value) => field.onChange(value === "none" ? undefined : parseInt(value))} value={field.value?.toString() || "none"}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a monthly milestone" />
+                        <SelectValue placeholder="Select a monthly milestone or leave unlinked" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
+                      <SelectItem value="none">No milestone (standalone task)</SelectItem>
                       {monthlyMilestones.map((milestone) => (
                         <SelectItem key={milestone.id} value={milestone.id.toString()}>
                           {milestone.title}
@@ -123,7 +124,8 @@ export function CreateTaskDialog({ open, onOpenChange }: CreateTaskDialogProps) 
                     <Textarea 
                       placeholder="Describe your weekly task"
                       rows={3}
-                      {...field} 
+                      {...field}
+                      value={field.value || ""}
                     />
                   </FormControl>
                   <FormMessage />

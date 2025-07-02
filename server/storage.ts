@@ -12,7 +12,14 @@ import {
   QuarterlyGoalWithMilestones,
   MonthlyMilestoneWithTasks,
   WeeklyTaskWithActions,
+  quarterlyGoals,
+  monthlyMilestones,
+  weeklyTasks,
+  dailyActions,
+  dailyCheckins,
 } from "@shared/schema";
+import { db } from "./db";
+import { eq, and, gte, lte } from "drizzle-orm";
 
 export interface IStorage {
   // Quarterly Goals
@@ -57,127 +64,109 @@ export interface IStorage {
   createDailyCheckin(checkin: InsertDailyCheckin): Promise<DailyCheckin>;
 }
 
-export class MemStorage implements IStorage {
-  private quarterlyGoals: Map<number, QuarterlyGoal>;
-  private monthlyMilestones: Map<number, MonthlyMilestone>;
-  private weeklyTasks: Map<number, WeeklyTask>;
-  private dailyActions: Map<number, DailyAction>;
-  private dailyCheckins: Map<number, DailyCheckin>;
-  
-  private currentGoalId: number = 1;
-  private currentMilestoneId: number = 1;
-  private currentTaskId: number = 1;
-  private currentActionId: number = 1;
-  private currentCheckinId: number = 1;
-
-  constructor() {
-    this.quarterlyGoals = new Map();
-    this.monthlyMilestones = new Map();
-    this.weeklyTasks = new Map();
-    this.dailyActions = new Map();
-    this.dailyCheckins = new Map();
-  }
+export class DatabaseStorage implements IStorage {
 
   // Quarterly Goals
   async getQuarterlyGoals(): Promise<QuarterlyGoal[]> {
-    return Array.from(this.quarterlyGoals.values());
+    return await db.select().from(quarterlyGoals);
   }
 
   async getQuarterlyGoal(id: number): Promise<QuarterlyGoal | undefined> {
-    return this.quarterlyGoals.get(id);
+    const [goal] = await db.select().from(quarterlyGoals).where(eq(quarterlyGoals.id, id));
+    return goal || undefined;
   }
 
   async getQuarterlyGoalWithMilestones(id: number): Promise<QuarterlyGoalWithMilestones | undefined> {
-    const goal = this.quarterlyGoals.get(id);
+    const [goal] = await db.select().from(quarterlyGoals).where(eq(quarterlyGoals.id, id));
     if (!goal) return undefined;
 
-    const milestones = Array.from(this.monthlyMilestones.values())
-      .filter(m => m.quarterlyGoalId === id);
+    const milestones = await db.select().from(monthlyMilestones)
+      .where(eq(monthlyMilestones.quarterlyGoalId, id));
 
     return { ...goal, milestones };
   }
 
   async createQuarterlyGoal(insertGoal: InsertQuarterlyGoal): Promise<QuarterlyGoal> {
-    const goal: QuarterlyGoal = {
-      ...insertGoal,
-      id: this.currentGoalId++,
-      createdAt: new Date(),
-    };
-    this.quarterlyGoals.set(goal.id, goal);
+    const [goal] = await db
+      .insert(quarterlyGoals)
+      .values(insertGoal)
+      .returning();
     return goal;
   }
 
   async updateQuarterlyGoal(id: number, updates: Partial<QuarterlyGoal>): Promise<QuarterlyGoal | undefined> {
-    const goal = this.quarterlyGoals.get(id);
-    if (!goal) return undefined;
-
-    const updatedGoal = { ...goal, ...updates };
-    this.quarterlyGoals.set(id, updatedGoal);
-    return updatedGoal;
+    const [goal] = await db
+      .update(quarterlyGoals)
+      .set(updates)
+      .where(eq(quarterlyGoals.id, id))
+      .returning();
+    return goal || undefined;
   }
 
   async deleteQuarterlyGoal(id: number): Promise<boolean> {
-    return this.quarterlyGoals.delete(id);
+    const result = await db.delete(quarterlyGoals).where(eq(quarterlyGoals.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
   }
 
   // Monthly Milestones
   async getMonthlyMilestones(): Promise<MonthlyMilestone[]> {
-    return Array.from(this.monthlyMilestones.values());
+    return await db.select().from(monthlyMilestones);
   }
 
   async getMilestonesByGoal(goalId: number): Promise<MonthlyMilestone[]> {
-    return Array.from(this.monthlyMilestones.values())
-      .filter(m => m.quarterlyGoalId === goalId);
+    return await db.select().from(monthlyMilestones)
+      .where(eq(monthlyMilestones.quarterlyGoalId, goalId));
   }
 
   async getMonthlyMilestone(id: number): Promise<MonthlyMilestone | undefined> {
-    return this.monthlyMilestones.get(id);
+    const [milestone] = await db.select().from(monthlyMilestones).where(eq(monthlyMilestones.id, id));
+    return milestone || undefined;
   }
 
   async getMonthlyMilestoneWithTasks(id: number): Promise<MonthlyMilestoneWithTasks | undefined> {
-    const milestone = this.monthlyMilestones.get(id);
+    const [milestone] = await db.select().from(monthlyMilestones).where(eq(monthlyMilestones.id, id));
     if (!milestone) return undefined;
 
-    const tasks = Array.from(this.weeklyTasks.values())
-      .filter(t => t.monthlyMilestoneId === id);
+    const tasks = await db.select().from(weeklyTasks)
+      .where(eq(weeklyTasks.monthlyMilestoneId, id));
     
-    const quarterlyGoal = this.quarterlyGoals.get(milestone.quarterlyGoalId);
+    const [quarterlyGoal] = await db.select().from(quarterlyGoals)
+      .where(eq(quarterlyGoals.id, milestone.quarterlyGoalId));
     if (!quarterlyGoal) return undefined;
 
     return { ...milestone, tasks, quarterlyGoal };
   }
 
   async createMonthlyMilestone(insertMilestone: InsertMonthlyMilestone): Promise<MonthlyMilestone> {
-    const milestone: MonthlyMilestone = {
-      ...insertMilestone,
-      id: this.currentMilestoneId++,
-      createdAt: new Date(),
-    };
-    this.monthlyMilestones.set(milestone.id, milestone);
+    const [milestone] = await db
+      .insert(monthlyMilestones)
+      .values(insertMilestone)
+      .returning();
     return milestone;
   }
 
   async updateMonthlyMilestone(id: number, updates: Partial<MonthlyMilestone>): Promise<MonthlyMilestone | undefined> {
-    const milestone = this.monthlyMilestones.get(id);
-    if (!milestone) return undefined;
-
-    const updatedMilestone = { ...milestone, ...updates };
-    this.monthlyMilestones.set(id, updatedMilestone);
-    return updatedMilestone;
+    const [milestone] = await db
+      .update(monthlyMilestones)
+      .set(updates)
+      .where(eq(monthlyMilestones.id, id))
+      .returning();
+    return milestone || undefined;
   }
 
   async deleteMonthlyMilestone(id: number): Promise<boolean> {
-    return this.monthlyMilestones.delete(id);
+    const result = await db.delete(monthlyMilestones).where(eq(monthlyMilestones.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
   }
 
   // Weekly Tasks
   async getWeeklyTasks(): Promise<WeeklyTask[]> {
-    return Array.from(this.weeklyTasks.values());
+    return await db.select().from(weeklyTasks);
   }
 
   async getTasksByMilestone(milestoneId: number): Promise<WeeklyTask[]> {
-    return Array.from(this.weeklyTasks.values())
-      .filter(t => t.monthlyMilestoneId === milestoneId);
+    return await db.select().from(weeklyTasks)
+      .where(eq(weeklyTasks.monthlyMilestoneId, milestoneId));
   }
 
   async getCurrentWeekTasks(): Promise<WeeklyTask[]> {
@@ -190,60 +179,62 @@ export class MemStorage implements IStorage {
     endOfWeek.setDate(startOfWeek.getDate() + 6);
     endOfWeek.setHours(23, 59, 59, 999);
 
-    return Array.from(this.weeklyTasks.values()).filter(task => {
-      const weekStart = new Date(task.weekStart);
-      return weekStart >= startOfWeek && weekStart <= endOfWeek;
-    });
+    return await db.select().from(weeklyTasks)
+      .where(and(
+        gte(weeklyTasks.weekStart, startOfWeek),
+        lte(weeklyTasks.weekStart, endOfWeek)
+      ));
   }
 
   async getWeeklyTask(id: number): Promise<WeeklyTask | undefined> {
-    return this.weeklyTasks.get(id);
+    const [task] = await db.select().from(weeklyTasks).where(eq(weeklyTasks.id, id));
+    return task || undefined;
   }
 
   async getWeeklyTaskWithActions(id: number): Promise<WeeklyTaskWithActions | undefined> {
-    const task = this.weeklyTasks.get(id);
+    const [task] = await db.select().from(weeklyTasks).where(eq(weeklyTasks.id, id));
     if (!task) return undefined;
 
-    const actions = Array.from(this.dailyActions.values())
-      .filter(a => a.weeklyTaskId === id);
+    const actions = await db.select().from(dailyActions)
+      .where(eq(dailyActions.weeklyTaskId, id));
     
-    const milestone = this.monthlyMilestones.get(task.monthlyMilestoneId);
+    const [milestone] = await db.select().from(monthlyMilestones)
+      .where(eq(monthlyMilestones.id, task.monthlyMilestoneId));
     if (!milestone) return undefined;
 
     return { ...task, actions, milestone };
   }
 
   async createWeeklyTask(insertTask: InsertWeeklyTask): Promise<WeeklyTask> {
-    const task: WeeklyTask = {
-      ...insertTask,
-      id: this.currentTaskId++,
-      createdAt: new Date(),
-    };
-    this.weeklyTasks.set(task.id, task);
+    const [task] = await db
+      .insert(weeklyTasks)
+      .values(insertTask)
+      .returning();
     return task;
   }
 
   async updateWeeklyTask(id: number, updates: Partial<WeeklyTask>): Promise<WeeklyTask | undefined> {
-    const task = this.weeklyTasks.get(id);
-    if (!task) return undefined;
-
-    const updatedTask = { ...task, ...updates };
-    this.weeklyTasks.set(id, updatedTask);
-    return updatedTask;
+    const [task] = await db
+      .update(weeklyTasks)
+      .set(updates)
+      .where(eq(weeklyTasks.id, id))
+      .returning();
+    return task || undefined;
   }
 
   async deleteWeeklyTask(id: number): Promise<boolean> {
-    return this.weeklyTasks.delete(id);
+    const result = await db.delete(weeklyTasks).where(eq(weeklyTasks.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
   }
 
   // Daily Actions
   async getDailyActions(): Promise<DailyAction[]> {
-    return Array.from(this.dailyActions.values());
+    return await db.select().from(dailyActions);
   }
 
   async getActionsByTask(taskId: number): Promise<DailyAction[]> {
-    return Array.from(this.dailyActions.values())
-      .filter(a => a.weeklyTaskId === taskId);
+    return await db.select().from(dailyActions)
+      .where(eq(dailyActions.weeklyTaskId, taskId));
   }
 
   async getTodayActions(): Promise<DailyAction[]> {
@@ -252,43 +243,43 @@ export class MemStorage implements IStorage {
     const tomorrow = new Date(today);
     tomorrow.setDate(today.getDate() + 1);
 
-    return Array.from(this.dailyActions.values()).filter(action => {
-      const actionDate = new Date(action.date);
-      actionDate.setHours(0, 0, 0, 0);
-      return actionDate.getTime() === today.getTime();
-    });
+    return await db.select().from(dailyActions)
+      .where(and(
+        gte(dailyActions.date, today),
+        lte(dailyActions.date, tomorrow)
+      ));
   }
 
   async getDailyAction(id: number): Promise<DailyAction | undefined> {
-    return this.dailyActions.get(id);
+    const [action] = await db.select().from(dailyActions).where(eq(dailyActions.id, id));
+    return action || undefined;
   }
 
   async createDailyAction(insertAction: InsertDailyAction): Promise<DailyAction> {
-    const action: DailyAction = {
-      ...insertAction,
-      id: this.currentActionId++,
-      createdAt: new Date(),
-    };
-    this.dailyActions.set(action.id, action);
+    const [action] = await db
+      .insert(dailyActions)
+      .values(insertAction)
+      .returning();
     return action;
   }
 
   async updateDailyAction(id: number, updates: Partial<DailyAction>): Promise<DailyAction | undefined> {
-    const action = this.dailyActions.get(id);
-    if (!action) return undefined;
-
-    const updatedAction = { ...action, ...updates };
-    this.dailyActions.set(id, updatedAction);
-    return updatedAction;
+    const [action] = await db
+      .update(dailyActions)
+      .set(updates)
+      .where(eq(dailyActions.id, id))
+      .returning();
+    return action || undefined;
   }
 
   async deleteDailyAction(id: number): Promise<boolean> {
-    return this.dailyActions.delete(id);
+    const result = await db.delete(dailyActions).where(eq(dailyActions.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
   }
 
   // Daily Checkins
   async getDailyCheckins(): Promise<DailyCheckin[]> {
-    return Array.from(this.dailyCheckins.values());
+    return await db.select().from(dailyCheckins);
   }
 
   async getTodayCheckin(): Promise<DailyCheckin | undefined> {
@@ -297,22 +288,21 @@ export class MemStorage implements IStorage {
     const tomorrow = new Date(today);
     tomorrow.setDate(today.getDate() + 1);
 
-    return Array.from(this.dailyCheckins.values()).find(checkin => {
-      const checkinDate = new Date(checkin.date);
-      checkinDate.setHours(0, 0, 0, 0);
-      return checkinDate.getTime() === today.getTime();
-    });
+    const [checkin] = await db.select().from(dailyCheckins)
+      .where(and(
+        gte(dailyCheckins.date, today),
+        lte(dailyCheckins.date, tomorrow)
+      ));
+    return checkin || undefined;
   }
 
   async createDailyCheckin(insertCheckin: InsertDailyCheckin): Promise<DailyCheckin> {
-    const checkin: DailyCheckin = {
-      ...insertCheckin,
-      id: this.currentCheckinId++,
-      createdAt: new Date(),
-    };
-    this.dailyCheckins.set(checkin.id, checkin);
+    const [checkin] = await db
+      .insert(dailyCheckins)
+      .values(insertCheckin)
+      .returning();
     return checkin;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();

@@ -31,7 +31,7 @@ export function CreateActionDialog({ open, onOpenChange }: CreateActionDialogPro
     defaultValues: {
       title: "",
       description: "",
-      weeklyTaskId: 0,
+      weeklyTaskId: undefined,
       date: new Date(),
       time: "",
       completed: false,
@@ -79,14 +79,15 @@ export function CreateActionDialog({ open, onOpenChange }: CreateActionDialogPro
               name="weeklyTaskId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Weekly Task</FormLabel>
-                  <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString()}>
+                  <FormLabel>Weekly Task (optional)</FormLabel>
+                  <Select onValueChange={(value) => field.onChange(value === "none" ? undefined : parseInt(value))} value={field.value?.toString() || "none"}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a weekly task" />
+                        <SelectValue placeholder="Select a weekly task or leave unlinked" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
+                      <SelectItem value="none">No task (standalone action)</SelectItem>
                       {weeklyTasks.map((task) => (
                         <SelectItem key={task.id} value={task.id.toString()}>
                           {task.title}
@@ -123,7 +124,8 @@ export function CreateActionDialog({ open, onOpenChange }: CreateActionDialogPro
                     <Textarea 
                       placeholder="Describe your daily action"
                       rows={3}
-                      {...field} 
+                      {...field}
+                      value={field.value || ""}
                     />
                   </FormControl>
                   <FormMessage />
@@ -138,7 +140,7 @@ export function CreateActionDialog({ open, onOpenChange }: CreateActionDialogPro
                 <FormItem>
                   <FormLabel>Time (optional)</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., 9:00 AM" {...field} />
+                    <Input placeholder="e.g., 9:00 AM" {...field} value={field.value || ""} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
