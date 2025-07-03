@@ -10,16 +10,18 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { insertMonthlyMilestoneSchema } from "@shared/schema";
-import type { InsertMonthlyMilestone, QuarterlyGoal } from "@shared/schema";
+import type { InsertMonthlyMilestone, QuarterlyGoal, MonthlyMilestone } from "@shared/schema";
 
 interface CreateMilestoneDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  milestone?: MonthlyMilestone; // For editing
 }
 
-export function CreateMilestoneDialog({ open, onOpenChange }: CreateMilestoneDialogProps) {
+export function CreateMilestoneDialog({ open, onOpenChange, milestone }: CreateMilestoneDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const isEditing = !!milestone;
 
   const { data: quarterlyGoals = [] } = useQuery<QuarterlyGoal[]>({
     queryKey: ["/api/quarterly-goals"],
@@ -28,25 +30,29 @@ export function CreateMilestoneDialog({ open, onOpenChange }: CreateMilestoneDia
   const form = useForm<InsertMonthlyMilestone>({
     resolver: zodResolver(insertMonthlyMilestoneSchema),
     defaultValues: {
-      title: "",
-      description: "",
-      quarterlyGoalId: 0,
-      month: new Date().getMonth() + 1,
-      year: new Date().getFullYear(),
-      completed: false,
+      title: milestone?.title || "",
+      description: milestone?.description || "",
+      quarterlyGoalId: milestone?.quarterlyGoalId || 0,
+      month: milestone?.month || new Date().getMonth() + 1,
+      year: milestone?.year || new Date().getFullYear(),
+      completed: milestone?.completed || false,
     },
   });
 
-  const createMutation = useMutation({
+  const saveMutation = useMutation({
     mutationFn: async (data: InsertMonthlyMilestone) => {
-      await apiRequest("POST", "/api/monthly-milestones", data);
+      if (isEditing) {
+        await apiRequest("PATCH", `/api/monthly-milestones/${milestone!.id}`, data);
+      } else {
+        await apiRequest("POST", "/api/monthly-milestones", data);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/monthly-milestones"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
       toast({
         title: "Success",
-        description: "Monthly milestone created successfully",
+        description: `Monthly milestone ${isEditing ? 'updated' : 'created'} successfully`,
       });
       form.reset();
       onOpenChange(false);
@@ -54,14 +60,42 @@ export function CreateMilestoneDialog({ open, onOpenChange }: CreateMilestoneDia
     onError: () => {
       toast({
         title: "Error",
-        description: "Failed to create monthly milestone",
+        description: `Failed to ${isEditing ? 'update' : 'create'} monthly milestone`,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("DELETE", `/api/monthly-milestones/${milestone!.id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/monthly-milestones"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
+      toast({
+        title: "Success",
+        description: "Monthly milestone deleted successfully",
+      });
+      onOpenChange(false);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete monthly milestone",
         variant: "destructive",
       });
     },
   });
 
   const onSubmit = (data: InsertMonthlyMilestone) => {
-    createMutation.mutate(data);
+    saveMutation.mutate(data);
+  };
+
+  const handleDelete = () => {
+    if (confirm("Are you sure you want to delete this milestone? This action cannot be undone.")) {
+      deleteMutation.mutate();
+    }
   };
 
   const months = [
@@ -83,7 +117,7 @@ export function CreateMilestoneDialog({ open, onOpenChange }: CreateMilestoneDia
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Create Monthly Milestone</DialogTitle>
+          <DialogTitle>{isEditing ? 'Edit Monthly Milestone' : 'Create Monthly Milestone'}</DialogTitle>
         </DialogHeader>
         
         <Form {...form}>
@@ -179,12 +213,23 @@ export function CreateMilestoneDialog({ open, onOpenChange }: CreateMilestoneDia
               >
                 Cancel
               </Button>
+              {isEditing && (
+                <Button 
+                  type="button" 
+                  variant="destructive"
+                  className="flex-1"
+                  onClick={handleDelete}
+                  disabled={deleteMutation.isPending}
+                >
+                  {deleteMutation.isPending ? "Deleting..." : "Delete"}
+                </Button>
+              )}
               <Button 
                 type="submit" 
                 className="flex-1"
-                disabled={createMutation.isPending}
+                disabled={saveMutation.isPending}
               >
-                {createMutation.isPending ? "Creating..." : "Create Milestone"}
+                {saveMutation.isPending ? (isEditing ? "Updating..." : "Creating...") : (isEditing ? "Update Milestone" : "Create Milestone")}
               </Button>
             </div>
           </form>

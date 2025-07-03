@@ -26,31 +26,10 @@ export default function Dashboard() {
   const [showCreateAction, setShowCreateAction] = useState(false);
   const [showCheckin, setShowCheckin] = useState(false);
   const [editingGoal, setEditingGoal] = useState<QuarterlyGoal | undefined>();
+  const [editingMilestone, setEditingMilestone] = useState<MonthlyMilestone | undefined>();
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
-
-  // Delete mutation for goals
-  const deleteGoalMutation = useMutation({
-    mutationFn: async (goalId: number) => {
-      await apiRequest("DELETE", `/api/quarterly-goals/${goalId}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/quarterly-goals"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
-      toast({
-        title: "Success",
-        description: "Goal deleted successfully",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to delete goal",
-        variant: "destructive",
-      });
-    },
-  });
 
   // Handlers
   const handleEditGoal = (goal: QuarterlyGoal) => {
@@ -58,10 +37,9 @@ export default function Dashboard() {
     setShowCreateGoal(true);
   };
 
-  const handleDeleteGoal = (goalId: number) => {
-    if (confirm("Are you sure you want to delete this goal?")) {
-      deleteGoalMutation.mutate(goalId);
-    }
+  const handleEditMilestone = (milestone: MonthlyMilestone) => {
+    setEditingMilestone(milestone);
+    setShowCreateMilestone(true);
   };
   
   // Fetch dashboard data
@@ -272,7 +250,6 @@ export default function Dashboard() {
                       key={goal.id} 
                       goal={goal}
                       onEdit={handleEditGoal}
-                      onDelete={handleDeleteGoal}
                     />
                   ))
                 )}
@@ -312,7 +289,11 @@ export default function Dashboard() {
                   </div>
                 ) : (
                   monthlyMilestones.map((milestone) => (
-                    <MilestoneItem key={milestone.id} milestone={milestone} />
+                    <MilestoneItem 
+                      key={milestone.id} 
+                      milestone={milestone}
+                      onEdit={handleEditMilestone}
+                    />
                   ))
                 )}
               </CardContent>
@@ -408,7 +389,14 @@ export default function Dashboard() {
         }}
         goal={editingGoal}
       />
-      <CreateMilestoneDialog open={showCreateMilestone} onOpenChange={setShowCreateMilestone} />
+      <CreateMilestoneDialog 
+        open={showCreateMilestone} 
+        onOpenChange={(open) => {
+          setShowCreateMilestone(open);
+          if (!open) setEditingMilestone(undefined);
+        }}
+        milestone={editingMilestone}
+      />
       <CreateTaskDialog open={showCreateTask} onOpenChange={setShowCreateTask} />
       <CreateActionDialog open={showCreateAction} onOpenChange={setShowCreateAction} />
       <DailyCheckinDialog open={showCheckin} onOpenChange={setShowCheckin} />

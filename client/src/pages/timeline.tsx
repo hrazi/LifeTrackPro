@@ -47,7 +47,11 @@ export default function Timeline() {
 
   // Filter data for selected quarter
   const quarterGoals = useMemo(() => {
-    return goals.filter(goal => goal.quarter === quarter && goal.year === parseInt(year as string));
+    return goals.filter(goal => {
+      const goalQuarter = goal.quarter.split(' ')[0]; // Extract "Q3" from "Q3 2025"
+      const goalYear = parseInt(goal.quarter.split(' ')[1]); // Extract 2025 from "Q3 2025"
+      return goalQuarter === quarter && goalYear === parseInt(year as string);
+    });
   }, [goals, quarter, year]);
 
   // Generate quarter navigation options

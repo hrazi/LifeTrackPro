@@ -62,8 +62,36 @@ export function CreateGoalDialog({ open, onOpenChange, goal }: CreateGoalDialogP
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("DELETE", `/api/quarterly-goals/${goal!.id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/quarterly-goals"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
+      toast({
+        title: "Success",
+        description: "Quarterly goal deleted successfully",
+      });
+      onOpenChange(false);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete quarterly goal",
+        variant: "destructive",
+      });
+    },
+  });
+
   const onSubmit = (data: InsertQuarterlyGoal) => {
     saveMutation.mutate(data);
+  };
+
+  const handleDelete = () => {
+    if (confirm("Are you sure you want to delete this goal? This action cannot be undone.")) {
+      deleteMutation.mutate();
+    }
   };
 
   return (
@@ -116,6 +144,17 @@ export function CreateGoalDialog({ open, onOpenChange, goal }: CreateGoalDialogP
               >
                 Cancel
               </Button>
+              {isEditing && (
+                <Button 
+                  type="button" 
+                  variant="destructive"
+                  className="flex-1"
+                  onClick={handleDelete}
+                  disabled={deleteMutation.isPending}
+                >
+                  {deleteMutation.isPending ? "Deleting..." : "Delete"}
+                </Button>
+              )}
               <Button 
                 type="submit" 
                 className="flex-1"
