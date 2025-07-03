@@ -31,6 +31,7 @@ export const weeklyTasks = pgTable("weekly_tasks", {
   weekStart: timestamp("week_start").notNull(),
   weekEnd: timestamp("week_end").notNull(),
   completed: boolean("completed").default(false),
+  recurring: boolean("recurring").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -42,6 +43,7 @@ export const dailyActions = pgTable("daily_actions", {
   date: timestamp("date").notNull(),
   time: text("time"), // e.g., "9:00 AM"
   completed: boolean("completed").default(false),
+  recurring: boolean("recurring").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

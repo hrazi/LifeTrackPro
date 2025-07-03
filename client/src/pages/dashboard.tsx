@@ -27,20 +27,11 @@ export default function Dashboard() {
   const [showCheckin, setShowCheckin] = useState(false);
   const [editingGoal, setEditingGoal] = useState<QuarterlyGoal | undefined>();
   const [editingMilestone, setEditingMilestone] = useState<MonthlyMilestone | undefined>();
+  const [editingTask, setEditingTask] = useState<WeeklyTask | undefined>();
+  const [editingAction, setEditingAction] = useState<DailyAction | undefined>();
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
-
-  // Handlers
-  const handleEditGoal = (goal: QuarterlyGoal) => {
-    setEditingGoal(goal);
-    setShowCreateGoal(true);
-  };
-
-  const handleEditMilestone = (milestone: MonthlyMilestone) => {
-    setEditingMilestone(milestone);
-    setShowCreateMilestone(true);
-  };
 
   const handleDeleteGoal = useMutation({
     mutationFn: async (goalId: number) => {
@@ -85,6 +76,26 @@ export default function Dashboard() {
     queryKey: ["/api/daily-actions"],
     queryFn: () => fetch("/api/daily-actions?today=true").then(res => res.json())
   });
+
+  const handleEditGoal = (goal: QuarterlyGoal) => {
+    setEditingGoal(goal);
+    setShowCreateGoal(true);
+  };
+
+  const handleEditMilestone = (milestone: MonthlyMilestone) => {
+    setEditingMilestone(milestone);
+    setShowCreateMilestone(true);
+  };
+
+  const handleEditTask = (task: WeeklyTask) => {
+    setEditingTask(task);
+    setShowCreateTask(true);
+  };
+
+  const handleEditAction = (action: DailyAction) => {
+    setEditingAction(action);
+    setShowCreateAction(true);
+  };
 
   const currentQuarter = getCurrentQuarter();
   const currentMonth = getCurrentMonth();

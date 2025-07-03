@@ -10,14 +10,16 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { insertDailyActionSchema } from "@shared/schema";
-import type { InsertDailyAction, WeeklyTask } from "@shared/schema";
+import type { InsertDailyAction, WeeklyTask, DailyAction } from "@shared/schema";
+import { useEffect } from "react";
 
 interface CreateActionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  action?: DailyAction; // For editing
 }
 
-export function CreateActionDialog({ open, onOpenChange }: CreateActionDialogProps) {
+export function CreateActionDialog({ open, onOpenChange, action }: CreateActionDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -38,16 +40,43 @@ export function CreateActionDialog({ open, onOpenChange }: CreateActionDialogPro
     },
   });
 
+  // Reset form when action changes or dialog opens
+  useEffect(() => {
+    if (action) {
+      form.reset({
+        title: action.title,
+        description: action.description || "",
+        weeklyTaskId: action.weeklyTaskId || undefined,
+        date: new Date(action.date),
+        time: action.time || "",
+      });
+    } else {
+      form.reset({
+        title: "",
+        description: "",
+        weeklyTaskId: undefined,
+        date: new Date(),
+        time: "",
+        completed: false,
+        recurring: false,
+      });
+    }
+  }, [action, form, open]);
+
   const createMutation = useMutation({
     mutationFn: async (data: InsertDailyAction) => {
-      await apiRequest("POST", "/api/daily-actions", data);
+      if (action) {
+        await apiRequest("PATCH", `/api/daily-actions/${action.id}`, data);
+      } else {
+        await apiRequest("POST", "/api/daily-actions", data);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/daily-actions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
       toast({
         title: "Success",
-        description: "Daily action created successfully",
+        description: action ? "Daily action updated successfully" : "Daily action created successfully",
       });
       form.reset();
       onOpenChange(false);
@@ -55,7 +84,7 @@ export function CreateActionDialog({ open, onOpenChange }: CreateActionDialogPro
     onError: () => {
       toast({
         title: "Error",
-        description: "Failed to create daily action",
+        description: action ? "Failed to update daily action" : "Failed to create daily action",
         variant: "destructive",
       });
     },
@@ -69,7 +98,7 @@ export function CreateActionDialog({ open, onOpenChange }: CreateActionDialogPro
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Create Daily Action</DialogTitle>
+          <DialogTitle>{action ? "Edit Daily Action" : "Create Daily Action"}</DialogTitle>
         </DialogHeader>
         
         <Form {...form}>
@@ -99,6 +128,33 @@ export function CreateActionDialog({ open, onOpenChange }: CreateActionDialogPro
                 </FormItem>
               )}
             />
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700">Day to Schedule</label>
+              <Select 
+                onValueChange={(value) => {
+                  const dayOffset = parseInt(value);
+                  const targetDate = new Date();
+                  targetDate.setDate(targetDate.getDate() + dayOffset);
+                  form.setValue("date", targetDate);
+                }}
+                defaultValue="0"
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select day to schedule" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">Today</SelectItem>
+                  <SelectItem value="1">Tomorrow</SelectItem>
+                  <SelectItem value="2">In 2 Days</SelectItem>
+                  <SelectItem value="3">In 3 Days</SelectItem>
+                  <SelectItem value="4">In 4 Days</SelectItem>
+                  <SelectItem value="5">In 5 Days</SelectItem>
+                  <SelectItem value="6">In 6 Days</SelectItem>
+                  <SelectItem value="7">Next Week</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
             <FormField
               control={form.control}
@@ -143,6 +199,31 @@ export function CreateActionDialog({ open, onOpenChange }: CreateActionDialogPro
                     <Input placeholder="e.g., 9:00 AM" {...field} value={field.value || ""} />
                   </FormControl>
                   <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="recurring"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                  <FormControl>
+                    <input
+                      type="checkbox"
+                      checked={field.value || false}
+                      onChange={(e) => field.onChange(e.target.checked)}
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel className="text-sm font-medium cursor-pointer">
+                      Recurring daily action
+                    </FormLabel>
+                    <p className="text-xs text-slate-500">
+                      Automatically create this action for future days
+                    </p>
+                  </div>
                 </FormItem>
               )}
             />
