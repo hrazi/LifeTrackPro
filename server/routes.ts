@@ -107,6 +107,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete("/api/monthly-milestones/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteMonthlyMilestone(id);
+      if (!success) {
+        return res.status(404).json({ message: "Monthly milestone not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete monthly milestone" });
+    }
+  });
+
   // Weekly Tasks
   app.get("/api/weekly-tasks", async (req, res) => {
     try {
@@ -152,6 +165,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete("/api/weekly-tasks/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteWeeklyTask(id);
+      if (!success) {
+        return res.status(404).json({ message: "Weekly task not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete weekly task" });
+    }
+  });
+
   // Daily Actions
   app.get("/api/daily-actions", async (req, res) => {
     try {
@@ -194,6 +220,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(action);
     } catch (error) {
       res.status(500).json({ message: "Failed to update daily action" });
+    }
+  });
+
+  app.delete("/api/daily-actions/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteDailyAction(id);
+      if (!success) {
+        return res.status(404).json({ message: "Daily action not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete daily action" });
     }
   });
 
