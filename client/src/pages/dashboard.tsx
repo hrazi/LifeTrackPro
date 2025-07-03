@@ -41,6 +41,27 @@ export default function Dashboard() {
     setEditingMilestone(milestone);
     setShowCreateMilestone(true);
   };
+
+  const handleDeleteGoal = useMutation({
+    mutationFn: async (goalId: number) => {
+      await apiRequest("DELETE", `/api/quarterly-goals/${goalId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/quarterly-goals"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
+      toast({
+        title: "Success",
+        description: "Quarterly goal deleted successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete quarterly goal",
+        variant: "destructive",
+      });
+    },
+  });
   
   // Fetch dashboard data
   const { data: stats } = useQuery({
@@ -250,6 +271,7 @@ export default function Dashboard() {
                       key={goal.id} 
                       goal={goal}
                       onEdit={handleEditGoal}
+                      onDelete={handleDeleteGoal.mutate}
                     />
                   ))
                 )}
