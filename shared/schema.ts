@@ -70,6 +70,8 @@ export const insertWeeklyTaskSchema = createInsertSchema(weeklyTasks).omit({
   createdAt: true,
 }).extend({
   monthlyMilestoneId: z.number().optional(),
+  weekStart: z.string().datetime().or(z.date()).transform((val) => typeof val === 'string' ? new Date(val) : val),
+  weekEnd: z.string().datetime().or(z.date()).transform((val) => typeof val === 'string' ? new Date(val) : val),
 });
 
 export const insertDailyActionSchema = createInsertSchema(dailyActions).omit({
@@ -77,11 +79,14 @@ export const insertDailyActionSchema = createInsertSchema(dailyActions).omit({
   createdAt: true,
 }).extend({
   weeklyTaskId: z.number().optional(),
+  date: z.string().datetime().or(z.date()).transform((val) => typeof val === 'string' ? new Date(val) : val),
 });
 
 export const insertDailyCheckinSchema = createInsertSchema(dailyCheckins).omit({
   id: true,
   createdAt: true,
+}).extend({
+  date: z.string().datetime().or(z.date()).transform((val) => typeof val === 'string' ? new Date(val) : val),
 });
 
 // Types
