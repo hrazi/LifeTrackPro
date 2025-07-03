@@ -11,38 +11,44 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { insertQuarterlyGoalSchema } from "@shared/schema";
 import { getCurrentQuarter } from "@/lib/date-utils";
-import type { InsertQuarterlyGoal } from "@shared/schema";
+import type { InsertQuarterlyGoal, QuarterlyGoal } from "@shared/schema";
 
 interface CreateGoalDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  goal?: QuarterlyGoal; // For editing
 }
 
-export function CreateGoalDialog({ open, onOpenChange }: CreateGoalDialogProps) {
+export function CreateGoalDialog({ open, onOpenChange, goal }: CreateGoalDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const isEditing = !!goal;
 
   const form = useForm<InsertQuarterlyGoal>({
     resolver: zodResolver(insertQuarterlyGoalSchema),
     defaultValues: {
-      title: "",
-      description: "",
-      quarter: getCurrentQuarter(),
-      year: new Date().getFullYear(),
-      completed: false,
+      title: goal?.title || "",
+      description: goal?.description || "",
+      quarter: goal?.quarter || getCurrentQuarter(),
+      year: goal?.year || new Date().getFullYear(),
+      completed: goal?.completed || false,
     },
   });
 
-  const createMutation = useMutation({
+  const saveMutation = useMutation({
     mutationFn: async (data: InsertQuarterlyGoal) => {
-      await apiRequest("POST", "/api/quarterly-goals", data);
+      if (isEditing) {
+        await apiRequest("PATCH", `/api/quarterly-goals/${goal!.id}`, data);
+      } else {
+        await apiRequest("POST", "/api/quarterly-goals", data);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/quarterly-goals"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
       toast({
         title: "Success",
-        description: "Quarterly goal created successfully",
+        description: `Quarterly goal ${isEditing ? 'updated' : 'created'} successfully`,
       });
       form.reset();
       onOpenChange(false);
@@ -50,21 +56,21 @@ export function CreateGoalDialog({ open, onOpenChange }: CreateGoalDialogProps) 
     onError: () => {
       toast({
         title: "Error",
-        description: "Failed to create quarterly goal",
+        description: `Failed to ${isEditing ? 'update' : 'create'} quarterly goal`,
         variant: "destructive",
       });
     },
   });
 
   const onSubmit = (data: InsertQuarterlyGoal) => {
-    createMutation.mutate(data);
+    saveMutation.mutate(data);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Create Quarterly Goal</DialogTitle>
+          <DialogTitle>{isEditing ? 'Edit Quarterly Goal' : 'Create Quarterly Goal'}</DialogTitle>
         </DialogHeader>
         
         <Form {...form}>
@@ -113,9 +119,9 @@ export function CreateGoalDialog({ open, onOpenChange }: CreateGoalDialogProps) 
               <Button 
                 type="submit" 
                 className="flex-1"
-                disabled={createMutation.isPending}
+                disabled={saveMutation.isPending}
               >
-                {createMutation.isPending ? "Creating..." : "Create Goal"}
+                {saveMutation.isPending ? (isEditing ? "Updating..." : "Creating...") : (isEditing ? "Update Goal" : "Create Goal")}
               </Button>
             </div>
           </form>

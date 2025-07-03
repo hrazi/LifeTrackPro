@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BarChart3, Plus, Settings, User } from "lucide-react";
@@ -14,6 +14,8 @@ import { CreateTaskDialog } from "@/components/create-task-dialog";
 import { CreateActionDialog } from "@/components/create-action-dialog";
 import { DailyCheckinDialog } from "@/components/daily-checkin-dialog";
 import { CelebrationDialog } from "@/components/celebration-dialog";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import { getCurrentQuarter, getCurrentWeekRange, getTodayDate, getCurrentMonth } from "@/lib/date-utils";
 import type { QuarterlyGoal, MonthlyMilestone, WeeklyTask, DailyAction } from "@shared/schema";
 
@@ -23,6 +25,44 @@ export default function Dashboard() {
   const [showCreateTask, setShowCreateTask] = useState(false);
   const [showCreateAction, setShowCreateAction] = useState(false);
   const [showCheckin, setShowCheckin] = useState(false);
+  const [editingGoal, setEditingGoal] = useState<QuarterlyGoal | undefined>();
+  
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Delete mutation for goals
+  const deleteGoalMutation = useMutation({
+    mutationFn: async (goalId: number) => {
+      await apiRequest("DELETE", `/api/quarterly-goals/${goalId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/quarterly-goals"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
+      toast({
+        title: "Success",
+        description: "Goal deleted successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete goal",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Handlers
+  const handleEditGoal = (goal: QuarterlyGoal) => {
+    setEditingGoal(goal);
+    setShowCreateGoal(true);
+  };
+
+  const handleDeleteGoal = (goalId: number) => {
+    if (confirm("Are you sure you want to delete this goal?")) {
+      deleteGoalMutation.mutate(goalId);
+    }
+  };
   
   // Fetch dashboard data
   const { data: stats } = useQuery({
@@ -228,7 +268,12 @@ export default function Dashboard() {
                   </div>
                 ) : (
                   quarterlyGoals.map((goal) => (
-                    <GoalCard key={goal.id} goal={goal} />
+                    <GoalCard 
+                      key={goal.id} 
+                      goal={goal}
+                      onEdit={handleEditGoal}
+                      onDelete={handleDeleteGoal}
+                    />
                   ))
                 )}
               </CardContent>
@@ -355,7 +400,14 @@ export default function Dashboard() {
       </main>
 
       {/* Dialogs */}
-      <CreateGoalDialog open={showCreateGoal} onOpenChange={setShowCreateGoal} />
+      <CreateGoalDialog 
+        open={showCreateGoal} 
+        onOpenChange={(open) => {
+          setShowCreateGoal(open);
+          if (!open) setEditingGoal(undefined);
+        }}
+        goal={editingGoal}
+      />
       <CreateMilestoneDialog open={showCreateMilestone} onOpenChange={setShowCreateMilestone} />
       <CreateTaskDialog open={showCreateTask} onOpenChange={setShowCreateTask} />
       <CreateActionDialog open={showCreateAction} onOpenChange={setShowCreateAction} />

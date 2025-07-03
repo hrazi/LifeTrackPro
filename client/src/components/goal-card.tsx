@@ -1,12 +1,16 @@
 import { CircularProgress } from "@/components/ui/circular-progress";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Edit3, Trash2 } from "lucide-react";
 import type { QuarterlyGoal } from "@shared/schema";
 
 interface GoalCardProps {
   goal: QuarterlyGoal;
+  onEdit?: (goal: QuarterlyGoal) => void;
+  onDelete?: (goalId: number) => void;
 }
 
-export function GoalCard({ goal }: GoalCardProps) {
+export function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
   // Mock progress calculation - in real app this would be calculated from milestones
   const progress = goal.completed ? 100 : Math.floor(Math.random() * 90) + 10;
   
@@ -31,7 +35,7 @@ export function GoalCard({ goal }: GoalCardProps) {
   };
 
   return (
-    <div className="border border-slate-200 rounded-lg p-4 hover:border-primary transition-colors cursor-pointer">
+    <div className="border border-slate-200 rounded-lg p-4 hover:border-primary transition-colors">
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <h4 className={`font-medium text-slate-800 ${goal.completed ? 'line-through opacity-75' : ''}`}>
@@ -47,6 +51,33 @@ export function GoalCard({ goal }: GoalCardProps) {
           {getStatusBadge()}
         </div>
       </div>
+      
+      {(onEdit || onDelete) && (
+        <div className="flex items-center justify-end space-x-2 mt-3 pt-3 border-t border-slate-100">
+          {onEdit && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onEdit(goal)}
+              className="text-slate-600 hover:text-slate-800"
+            >
+              <Edit3 className="h-4 w-4 mr-1" />
+              Edit
+            </Button>
+          )}
+          {onDelete && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onDelete(goal.id)}
+              className="text-red-600 hover:text-red-800"
+            >
+              <Trash2 className="h-4 w-4 mr-1" />
+              Delete
+            </Button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
