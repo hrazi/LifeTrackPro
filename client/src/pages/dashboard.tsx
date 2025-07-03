@@ -271,7 +271,6 @@ export default function Dashboard() {
                       key={goal.id} 
                       goal={goal}
                       onEdit={handleEditGoal}
-                      onDelete={handleDeleteGoal.mutate}
                     />
                   ))
                 )}
