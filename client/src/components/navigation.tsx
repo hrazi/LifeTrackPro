@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Calendar } from "lucide-react";
+import { LayoutDashboard, Calendar, Timer } from "lucide-react";
 
 export function Navigation() {
   const [location] = useLocation();
@@ -32,6 +32,17 @@ export function Navigation() {
                 >
                   <Calendar className="h-4 w-4 mr-2" />
                   Timeline
+                </Button>
+              </Link>
+
+              <Link href="/countdown">
+                <Button
+                  variant={location === "/countdown" ? "default" : "ghost"}
+                  size="sm"
+                  className="flex items-center"
+                >
+                  <Timer className="h-4 w-4 mr-2" />
+                  Countdown
                 </Button>
               </Link>
             </div>
