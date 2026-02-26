@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Navigation } from "@/components/navigation";
 import Dashboard from "@/pages/dashboard";
 import Timeline from "@/pages/timeline";
+import Countdown from "@/pages/countdown";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -15,6 +16,7 @@ function Router() {
       <Switch>
         <Route path="/" component={Dashboard} />
         <Route path="/timeline" component={Timeline} />
+        <Route path="/countdown" component={Countdown} />
         <Route component={NotFound} />
       </Switch>
     </div>
